@@ -1,0 +1,6 @@
+{
+  "name": "LIC Jeevan Labh NoteLLM Studio",
+  "description": "Interactive animated video studio, policy calculator, and regional sales visualization for LIC Jeevan Labh Plan 736.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
