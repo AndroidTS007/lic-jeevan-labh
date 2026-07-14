@@ -14,7 +14,7 @@ This document catalogs complete specification details for **34 LIC products** (c
 *   **Min Entry Age:** 90 days
 *   **Max Entry Age:** 65 years
 *   **Min Sum Assured:** ₹1,00,000
-*   **Max Sum Assured:** No upper limit
+*   **Max Sum Assured:** No upper limits
 *   **Features:**
     *   Participating, non-linked, individual savings plan combining protection and savings
     *   One-time single lump-sum premium paid at policy inception
