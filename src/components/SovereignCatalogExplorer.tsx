@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Shield, Info, Calendar, Award, GraduationCap, 
   Coins, Heart, ShieldCheck, ChevronDown, ChevronUp, BookOpen, 
@@ -6,11 +6,114 @@ import {
 } from "lucide-react";
 import { LIC_PLANS, LIC_RIDERS } from "../plansData";
 import { LicPlan, LicRider } from "../types";
+import { supabase } from "../supabaseClient";
 
 export default function SovereignCatalogExplorer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "endowment" | "whole_life" | "money_back" | "term" | "riders">("all");
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
+
+  const [plans, setPlans] = useState<LicPlan[]>([]);
+  const [riders, setRiders] = useState<LicRider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Fetch from Supabase
+        const { data, error } = await supabase
+          .from("lic_catalog")
+          .select("*");
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (!data || data.length === 0) {
+          // Fallback to static if no records returned
+          setPlans(LIC_PLANS);
+          setRiders(LIC_RIDERS);
+          return;
+        }
+
+        const supabasePlans: LicPlan[] = [];
+        const supabaseRiders: LicRider[] = [];
+
+        data.forEach((row: any) => {
+          const id = row.id;
+          
+          if (row.category === "Supplemental Rider") {
+            const localRider = LIC_RIDERS.find(r => r.id === id);
+            
+            const mappedRider: LicRider = {
+              id: row.id,
+              name: row.name || localRider?.name || "",
+              uin: row.uin || localRider?.uin || "",
+              purpose: localRider?.purpose || row.features?.[0] || "",
+              payout: localRider?.payout || row.features?.[1] || "",
+              eligibility: localRider?.eligibility || `Age ${row.min_entry_age || ""} to ${row.max_entry_age || ""}`,
+              keyBenefit: localRider?.keyBenefit || row.features?.[2] || ""
+            };
+            
+            supabaseRiders.push(mappedRider);
+          } else {
+            let category: "endowment" | "whole_life" | "money_back" | "term" = "endowment";
+            const rowCat = (row.category || "").toLowerCase().replace("-", "_").replace(" ", "_");
+            if (rowCat === "whole_life" || rowCat === "money_back" || rowCat === "term" || rowCat === "endowment") {
+              category = rowCat;
+            }
+
+            let minSumAssured = 0;
+            if (row.min_sum_assured) {
+              const cleaned = row.min_sum_assured.replace(/[^\d]/g, "");
+              minSumAssured = parseInt(cleaned, 10) || 0;
+            }
+
+            const localPlan = LIC_PLANS.find(p => p.id === id);
+
+            const mappedPlan: LicPlan = {
+              id: row.id,
+              name: row.name || localPlan?.name || "",
+              planNumber: typeof row.plan_number === "number" ? row.plan_number : (localPlan?.planNumber || 0),
+              uin: row.uin || localPlan?.uin || "",
+              category,
+              minAge: row.min_entry_age || localPlan?.minAge || "",
+              maxAge: row.max_entry_age || localPlan?.maxAge || "",
+              minSumAssured: minSumAssured || localPlan?.minSumAssured || 0,
+              maxSumAssured: row.max_sum_assured || localPlan?.maxSumAssured || "",
+              features: Array.isArray(row.features) && row.features.length > 0 ? row.features : (localPlan?.features || []),
+              maturityBenefit: localPlan?.maturityBenefit || "",
+              deathBenefit: localPlan?.deathBenefit || "",
+              bestFor: localPlan?.bestFor || "",
+              premiumModes: localPlan?.premiumModes || ["Yearly", "Half-yearly", "Quarterly", "Monthly"],
+              loanFacility: localPlan?.loanFacility || "",
+              taxBenefits: localPlan?.taxBenefits || ""
+            };
+
+            supabasePlans.push(mappedPlan);
+          }
+        });
+
+        setPlans(supabasePlans);
+        setRiders(supabaseRiders);
+      } catch (err: any) {
+        console.error("Error loading Supabase catalog:", err);
+        setError(err.message || "Failed to load catalog data");
+        setIsFallback(true);
+        setPlans(LIC_PLANS);
+        setRiders(LIC_RIDERS);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   const handleToggleExpand = (id: string) => {
     setExpandedPlanId(expandedPlanId === id ? null : id);
@@ -18,7 +121,7 @@ export default function SovereignCatalogExplorer() {
 
   // Filter logic
   const filteredPlans = useMemo(() => {
-    return LIC_PLANS.filter(plan => {
+    return plans.filter(plan => {
       // Category filter
       if (activeFilter !== "all" && plan.category !== activeFilter) {
         return false;
@@ -35,12 +138,12 @@ export default function SovereignCatalogExplorer() {
         plan.features.some(f => f.toLowerCase().includes(query))
       );
     });
-  }, [activeFilter, searchQuery]);
+  }, [plans, activeFilter, searchQuery]);
 
   const filteredRiders = useMemo(() => {
     if (activeFilter !== "all" && activeFilter !== "riders") return [];
     
-    return LIC_RIDERS.filter(rider => {
+    return riders.filter(rider => {
       if (searchQuery.trim() === "") return true;
       const query = searchQuery.toLowerCase();
       return (
@@ -50,7 +153,7 @@ export default function SovereignCatalogExplorer() {
         rider.keyBenefit.toLowerCase().includes(query)
       );
     });
-  }, [activeFilter, searchQuery]);
+  }, [riders, activeFilter, searchQuery]);
 
   // Icons corresponding to categories
   const getCategoryIcon = (category: string) => {
@@ -78,8 +181,34 @@ export default function SovereignCatalogExplorer() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4 bg-white/50 backdrop-blur-md rounded-xl border border-slate-200 shadow-sm min-h-[300px]">
+        <div className="relative w-10 h-10">
+          <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-[#003087] animate-spin"></div>
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-xs font-sans font-bold text-[#003087] uppercase tracking-wider animate-pulse">
+            Connecting to Supabase...
+          </p>
+          <p className="text-[10px] text-slate-500 font-semibold font-sans">
+            Fetching official sovereign LIC plan catalog
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" id="catalog-explorer">
+      
+      {isFallback && (
+        <div className="bg-amber-50 text-[#003087] border border-amber-200 rounded-lg p-3 text-[11px] font-semibold flex items-center gap-2 shadow-3xs">
+          <Info className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>Note: Displaying static local catalog backup (offline or failed to load from Supabase: {error || "Unknown error"}).</span>
+        </div>
+      )}
       
       {/* Search and Filters panel */}
       <div className="bg-slate-50 rounded-xl border border-slate-200 p-4.5 space-y-4 shadow-3xs">
