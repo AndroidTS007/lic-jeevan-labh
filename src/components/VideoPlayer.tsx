@@ -3,19 +3,22 @@ import {
   Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, 
   RotateCcw, Sliders, GraduationCap, Award, HelpCircle, 
   Layers, ShieldCheck, Heart, UserCheck, Compass, Users2, 
-  FileCheck, PhoneCall, Gift, CheckCircle2, AlertCircle, ChevronRight
+  FileCheck, PhoneCall, Gift, CheckCircle2, AlertCircle, ChevronRight,
+  Coins, Building, Plus
 } from "lucide-react";
 import { Scene } from "../types";
 import { INITIAL_SCENES } from "../data";
+import { LIC_PLANS } from "../plansData";
 import { motion, AnimatePresence } from "motion/react";
 
 interface VideoPlayerProps {
   onSceneChange?: (sceneId: number) => void;
   selectedSceneId?: number;
+  scenes: Scene[];
+  portfolioSelectedIds: string[];
 }
 
-export default function VideoPlayer({ onSceneChange, selectedSceneId }: VideoPlayerProps) {
-  const [scenes, setScenes] = useState<Scene[]>(INITIAL_SCENES);
+export default function VideoPlayer({ onSceneChange, selectedSceneId, scenes, portfolioSelectedIds }: VideoPlayerProps) {
   const [currentSceneIndex, setCurrentSceneIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0); // 0 to 100 within current scene
@@ -172,8 +175,101 @@ export default function VideoPlayer({ onSceneChange, selectedSceneId }: VideoPla
     goToScene(0);
   };
 
+  const getPlanIcon = (id: string) => {
+    switch (id) {
+      case "labh":
+        return <Award className="w-5 h-5 text-amber-500" />;
+      case "anand":
+        return <Heart className="w-5 h-5 text-red-500" />;
+      case "umang":
+        return <Coins className="w-5 h-5 text-emerald-500" />;
+      case "lakshya":
+        return <GraduationCap className="w-5 h-5 text-blue-500" />;
+      case "bima_bachat":
+        return <Layers className="w-5 h-5 text-orange-500" />;
+      case "jeevan_amar":
+        return <ShieldCheck className="w-5 h-5 text-indigo-500" />;
+      case "jeevan_akshay":
+        return <Building className="w-5 h-5 text-[#003087]" />;
+      case "bhagya_lakshmi":
+        return <Users2 className="w-5 h-5 text-pink-500" />;
+      default:
+        return <FileCheck className="w-5 h-5 text-slate-400" />;
+    }
+  };
+
+  const getPlanDetails = (id: string) => {
+    switch (id) {
+      case "labh": return { name: "LIC Jeevan Labh", plan: 736 };
+      case "anand": return { name: "LIC New Jeevan Anand", plan: 915 };
+      case "umang": return { name: "LIC Jeevan Umang", plan: 945 };
+      case "lakshya": return { name: "LIC Jeevan Lakshya", plan: 933 };
+      case "bima_bachat": return { name: "LIC New Bima Bachat", plan: 948 };
+      case "jeevan_amar": return { name: "LIC Jeevan Amar", plan: 855 };
+      case "jeevan_akshay": return { name: "LIC Jeevan Akshay-VII", plan: 857 };
+      case "bhagya_lakshmi": return { name: "LIC Bhagya Lakshmi", plan: 839 };
+      default: {
+        const p = LIC_PLANS.find(plan => plan.id === id);
+        return p ? { name: p.name, plan: p.planNumber } : { name: id, plan: "" };
+      }
+    }
+  };
+
   // Helper renderer for dynamic scene infographics
   const renderInteractiveGraphic = () => {
+    // Catch dynamic intro scenes
+    if (activeScene.id >= 10 && activeScene.id < 99) {
+      const planId = (activeScene as any).associatedPlanId || "labh";
+      const planDetails = getPlanDetails(planId);
+      
+      return (
+        <div className="relative w-full h-full flex flex-col items-center justify-center bg-radial from-blue-950 to-slate-950 p-6 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,58,138,0.2)_0%,transparent_70%)] pointer-events-none" />
+          
+          <motion.div 
+            initial={{ rotateY: 45, opacity: 0, scale: 0.95 }}
+            animate={{ rotateY: 0, opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className="bg-amber-50 rounded-lg p-5 shadow-2xl border-4 border-amber-400 max-w-sm w-full text-slate-800 relative"
+          >
+            <div className="absolute right-4 top-4 bg-orange-600 text-white font-bold text-[9px] px-2 py-0.5 rounded shadow animate-pulse uppercase">
+              Plan {planDetails.plan || "736"}
+            </div>
+            
+            <h4 className="font-serif text-sm border-b-2 border-amber-300 pb-2 text-center text-[#003087] font-extrabold tracking-wide">
+              {planDetails.name}
+            </h4>
+            
+            <div className="flex justify-center my-4">
+              <div className="bg-blue-50 p-3 rounded-full border border-blue-200 shadow-inner flex items-center justify-center text-blue-900 bg-gradient-to-tr from-blue-100 to-indigo-100">
+                {getPlanIcon(planId)}
+              </div>
+            </div>
+            
+            <div className="space-y-2.5 text-[11px] font-sans">
+              <div className="flex items-center gap-2 font-semibold text-slate-700">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Government-Backed Guarantee</span>
+              </div>
+              <div className="flex items-center gap-2 font-semibold text-slate-700">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Tax Savings under Section 80C</span>
+              </div>
+              <div className="flex items-center gap-2 font-semibold text-slate-700">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Guaranteed Capital &amp; Profits Protection</span>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-amber-200 flex justify-between items-center text-[9px] text-slate-500 font-mono">
+              <span>Sovereign Product Catalog</span>
+              <span className="text-[#003087] font-bold">100% SECURE</span>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
     switch (activeScene.id) {
       case 1: // Hook
         return (
@@ -626,6 +722,57 @@ export default function VideoPlayer({ onSceneChange, selectedSceneId }: VideoPla
             
             <p className="text-[10.5px] text-zinc-300 mt-2 font-sans max-w-sm">
               Secure your children's higher study milestones, marriages, and your own cozy pension corpus. Contact your trusted LIC agent today!
+            </p>
+          </div>
+        );
+
+      case 99: // Custom Portfolio Combo Scene
+        return (
+          <div className="w-full h-full flex flex-col justify-center items-center bg-radial from-slate-900 to-blue-950 p-6 text-white overflow-hidden">
+            <h4 className="text-xs font-mono text-[#ffd700] uppercase tracking-widest mb-4 text-center font-bold">
+              Your Customized Sovereign Portfolio Combo
+            </h4>
+            
+            {/* Horizontal timeline of selected plans */}
+            <div className="grid grid-cols-3 gap-3 w-full max-w-md">
+              {/* Show up to 3 selected plans in the graphic */}
+              {portfolioSelectedIds.slice(0, 3).map((planId, idx) => {
+                const planDetails = getPlanDetails(planId);
+                return (
+                  <motion.div 
+                    key={planId}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: idx * 0.2 }}
+                    className="bg-slate-950/80 p-3 rounded-lg border-2 border-blue-500/35 text-center flex flex-col justify-between shadow-xl"
+                  >
+                    <div>
+                      <div className="bg-slate-905 p-2 rounded-md inline-block mb-1 bg-slate-800 border border-slate-700 shadow-sm">
+                        {getPlanIcon(planId)}
+                      </div>
+                      <h5 className="text-[10px] font-bold text-white truncate max-w-[100px] mx-auto mt-1">{planDetails.name}</h5>
+                      <span className="text-[9px] text-[#ffd700] block font-mono font-bold">Plan {planDetails.plan}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              
+              {/* If more than 3, show a "+X more" card */}
+              {portfolioSelectedIds.length > 3 && (
+                <motion.div 
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="bg-slate-950/70 p-3 rounded-lg border border-dashed border-slate-600 text-center flex flex-col justify-center items-center shadow-lg"
+                >
+                  <Plus className="w-6 h-6 text-slate-400 mb-1" />
+                  <span className="text-[10px] font-bold text-slate-400">+{portfolioSelectedIds.length - 3} More</span>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Display allocation message */}
+            <p className="text-[10.5px] text-slate-300 text-center mt-5 bg-slate-950/70 py-1.5 px-4 rounded-full border border-blue-500/20 shadow-sm max-w-sm">
+              📊 Multi-policy safety locks: <span className="text-[#ffd700] font-bold">{portfolioSelectedIds.length} plans</span> active simultaneously.
             </p>
           </div>
         );

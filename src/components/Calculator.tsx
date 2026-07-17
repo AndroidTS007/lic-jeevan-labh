@@ -15,15 +15,32 @@ import {
 import SovereignCatalogExplorer from "./SovereignCatalogExplorer";
 import { LIC_PLANS } from "../plansData";
 
-export default function Calculator() {
+interface CalculatorProps {
+  portfolioSelectedIds: string[];
+  setPortfolioSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
+}
+
+export default function Calculator({ portfolioSelectedIds, setPortfolioSelectedIds }: CalculatorProps) {
   const [activeTab, setActiveTab] = useState<"individual" | "portfolio" | "explorer">("portfolio"); // default to the major value-add multi-plan
   const [age, setAge] = useState<number>(30);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(5000);
   const [policyTerm, setPolicyTerm] = useState<16 | 21 | 25>(25);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("labh"); // For single view
+  const [syncStatus, setSyncStatus] = useState<"idle" | "synced">("idle");
+
+  const handleSyncClick = () => {
+    setSyncStatus("synced");
+    try {
+      localStorage.setItem("portfolioSelectedIds", JSON.stringify(portfolioSelectedIds));
+    } catch (e) {
+      console.error(e);
+    }
+    setTimeout(() => {
+      setSyncStatus("idle");
+    }, 1500);
+  };
 
   // Portfolio Builder state
-  const [portfolioSelectedIds, setPortfolioSelectedIds] = useState<string[]>(["labh", "anand", "umang"]);
   const [portfolioStrategy, setPortfolioStrategy] = useState<"equal" | "returns" | "shield" | "custom">("equal");
   const [customAllocations, setCustomAllocations] = useState<{ [key: string]: number }>({
     labh: 40,
@@ -476,6 +493,27 @@ export default function Calculator() {
                   );
                 })}
               </div>
+
+              <button 
+                onClick={handleSyncClick}
+                className={`w-full mt-3 py-2.5 rounded font-bold text-xs uppercase tracking-wider shadow transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  syncStatus === "synced"
+                    ? "bg-emerald-600 text-white shadow-md scale-[1.01]"
+                    : "bg-[#003087] hover:bg-[#002569] text-[#ffd700] hover:shadow-md active:scale-95 border border-[#ccae00]"
+                }`}
+              >
+                {syncStatus === "synced" ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-white animate-bounce" />
+                    <span>✓ Portfolio Synced &amp; Saved!</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-[#ffd700]" />
+                    <span>Sync Combo with Animated Player</span>
+                  </>
+                )}
+              </button>
 
               <p className="text-[10px] text-slate-500 italic mt-1.5">
                 💡 Choosing multiple policies hedges tax rules, combines pension yields, and sets separate child and lifetime checkpoints.
