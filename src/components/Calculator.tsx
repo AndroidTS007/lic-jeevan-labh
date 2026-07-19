@@ -184,7 +184,8 @@ export default function Calculator({ portfolioSelectedIds, setPortfolioSelectedI
       let combinedAssetVal = 0;
 
       portfolioSimulation.allocations.forEach(alloc => {
-        const fullPlan = allPlanResults.find(p => p.id === alloc.id)!;
+        const fullPlan = allPlanResults.find(p => p.id === alloc.id);
+        if (!fullPlan) return;
         const scale = fullPlan.sumAssured > 0 ? alloc.allocatedSumAssured / fullPlan.sumAssured : 0;
 
         // Premium for this year
@@ -588,7 +589,8 @@ export default function Calculator({ portfolioSelectedIds, setPortfolioSelectedI
                     </span>
                     {portfolioSelectedIds.map((id) => {
                       const value = customAllocations[id] || 30;
-                      const planInfo = allPolicyCategories.find(p => p.id === id)!;
+                      const planInfo = allPolicyCategories.find(p => p.id === id);
+                      if (!planInfo) return null;
                       return (
                         <div key={id} className="space-y-1 bg-white p-2.5 rounded border border-slate-150">
                           <div className="flex justify-between items-center text-xs font-bold">

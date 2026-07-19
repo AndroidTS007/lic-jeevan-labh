@@ -37,10 +37,15 @@ async function startServer() {
       });
 
       // Map client messages format to Gemini SDK standard contents
-      const mappedContents = messages.map((m: any) => ({
+      let mappedContents = messages.map((m: any) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }]
       }));
+
+      // Filter out leading model messages to comply with Gemini API rules
+      while (mappedContents.length > 0 && mappedContents[0].role === "model") {
+        mappedContents.shift();
+      }
 
       const modelName = "gemini-3.5-flash"; // Recommended for general/search-grounded tasks
 

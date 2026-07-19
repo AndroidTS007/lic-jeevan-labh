@@ -218,7 +218,7 @@ export default function VideoPlayer({ onSceneChange, selectedSceneId, scenes, po
   // Helper renderer for dynamic scene infographics
   const renderInteractiveGraphic = () => {
     // Catch dynamic intro scenes
-    if (activeScene.id >= 10 && activeScene.id < 99) {
+    if (activeScene.id >= 100 && activeScene.id < 200) {
       const planId = (activeScene as any).associatedPlanId || "labh";
       const planDetails = getPlanDetails(planId);
       

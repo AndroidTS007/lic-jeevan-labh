@@ -10,7 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(
-  supabaseUrl || "",
-  supabaseAnonKey || ""
-);
+// Create a safe client that won't crash on initialization if URL/Key are empty
+const dummyClient = {
+  from: () => ({
+    select: async () => ({ data: null, error: new Error("Supabase is not configured. Using local fallback.") })
+  })
+} as any;
+
+export const supabase = (supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : dummyClient;

@@ -98,7 +98,7 @@ export default function App() {
       };
 
       const planDetails = getPlanDetails(planId);
-      const sceneId = 10 + index; // Dynamic ID, e.g. 10, 11, 12...
+      const sceneId = 100 + index; // Dynamic ID
       
       let highlightText = "Secure government-backed endowment growth with profit sharing.";
       if (planId === "umang") highlightText = "Whole life cover with guaranteed 8% annual survival payouts.";
@@ -345,6 +345,7 @@ export default function App() {
 
             {activeTab === "studio" && (
               <StudioEditor 
+                scenes={scenes}
                 onUpdateScenes={handleUpdateScenes} 
                 onSelectScene={handleSelectSceneFromEditor} 
               />

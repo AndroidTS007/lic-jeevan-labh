@@ -7,12 +7,13 @@ import { Scene } from "../types";
 import { INITIAL_SCENES, DEFAULT_PROMPT_METADATA } from "../data";
 
 interface StudioEditorProps {
+  scenes: Scene[];
   onUpdateScenes: (scenes: Scene[]) => void;
   onSelectScene: (sceneId: number) => void;
 }
 
-export default function StudioEditor({ onUpdateScenes, onSelectScene }: StudioEditorProps) {
-  const [scenes, setScenes] = useState<Scene[]>(INITIAL_SCENES);
+export default function StudioEditor({ scenes: initialScenes, onUpdateScenes, onSelectScene }: StudioEditorProps) {
+  const [scenes, setScenes] = useState<Scene[]>(() => initialScenes);
   const [copied, setCopied] = useState<boolean>(false);
   const [selectedSceneIndex, setSelectedSceneIndex] = useState<number>(0);
   

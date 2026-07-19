@@ -473,7 +473,8 @@ export function simulatePortfolio(
   let combinedAnnualAnnuity = 0;
   
   const finalAllocationsList = selectedPlanIds.map((planId) => {
-    const originalPlan = allPolicyResults.find(p => p.id === planId)!;
+    const originalPlan = allPolicyResults.find(p => p.id === planId);
+    if (!originalPlan) return null;
     const allocPercent = allocationsMap[planId] || 0;
     const allocatedMonthlyPremium = Math.round((totalMonthlyBudget * allocPercent) / 100);
     
@@ -502,7 +503,7 @@ export function simulatePortfolio(
       allocatedMaturity,
       percentage: Math.round(allocPercent)
     };
-  });
+  }).filter((item): item is NonNullable<typeof item> => item !== null);
 
   const overallROI = overallTotalPremiumPaid > 0 ? Number((combinedProjectedMaturity / overallTotalPremiumPaid).toFixed(2)) : 0;
   
