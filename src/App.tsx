@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Play, Calculator as CalcIcon, Compass, Edit3, Shield, Bot,
   Info, Award, ExternalLink, Moon, Sparkles, Landmark, Star, HelpCircle
@@ -14,11 +14,186 @@ import SalesHeatmap from "./components/SalesHeatmap";
 import StudioEditor from "./components/StudioEditor";
 import AdvisorChat from "./components/AdvisorChat";
 import { Scene } from "./types";
+import { LIC_PLANS } from "./plansData";
+import { INITIAL_SCENES } from "./data";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"player" | "calculator" | "heatmap" | "studio" | "advisor">("player");
   const [selectedSceneId, setSelectedSceneId] = useState<number>(1);
-  const [scenes, setScenes] = useState<Scene[]>([]);
+  const [scenes, setScenes] = useState<Scene[]>(INITIAL_SCENES);
+  
+  // Initialize portfolioSelectedIds from localStorage
+  const [portfolioSelectedIds, setPortfolioSelectedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("portfolioSelectedIds");
+      return saved ? JSON.parse(saved) : ["labh", "anand", "umang"];
+    } catch {
+      return ["labh", "anand", "umang"];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("portfolioSelectedIds", JSON.stringify(portfolioSelectedIds));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [portfolioSelectedIds]);
+
+  useEffect(() => {
+    const getPlanNameAndNumber = (id: string) => {
+      switch (id) {
+        case "labh": return "LIC Jeevan Labh (Plan 736)";
+        case "anand": return "LIC New Jeevan Anand (Plan 915)";
+        case "umang": return "LIC Jeevan Umang (Plan 945)";
+        case "lakshya": return "LIC Jeevan Lakshya (Plan 933)";
+        case "bima_bachat": return "LIC New Bima Bachat (Plan 948)";
+        case "jeevan_amar": return "LIC Jeevan Amar (Plan 855)";
+        case "jeevan_akshay": return "LIC Jeevan Akshay-VII (Plan 857)";
+        case "bhagya_lakshmi": return "LIC Bhagya Lakshmi (Plan 839)";
+        default: {
+          const p = LIC_PLANS.find(plan => plan.id === id);
+          return p ? `${p.name} (Plan ${p.planNumber})` : id;
+        }
+      }
+    };
+
+    const planNames = portfolioSelectedIds.map(getPlanNameAndNumber).join(", ");
+    
+    // 1. Hook Scene
+    const scenesList: Scene[] = [
+      {
+        id: 1,
+        title: "Your Custom Portfolio Combo — Overview",
+        duration: 12,
+        visualDescription: "A personalized Indian family dashboard with floating icons representing your selected policies: " + planNames,
+        narratorText: `Kya aapne apne safe investment portfolio ko check kiya hai? Aapne apne combo mein total ${portfolioSelectedIds.length} plans select kiye hain. Chaliye inke detail benefits dekhte hain!`,
+        textOnScreen: [
+          "Your Customized LIC Portfolio",
+          `${portfolioSelectedIds.length} Safe Government Schemes`,
+          "100% Tax Exempt & Capital Protected"
+        ],
+        icon: "Sliders",
+        category: "introduction"
+      }
+    ];
+
+    // 2. Dynamic Intro Scenes for EACH selected plan!
+    portfolioSelectedIds.forEach((planId, index) => {
+      const getPlanDetails = (id: string) => {
+        switch (id) {
+          case "labh": return { name: "LIC Jeevan Labh", plan: 736 };
+          case "anand": return { name: "LIC New Jeevan Anand", plan: 915 };
+          case "umang": return { name: "LIC Jeevan Umang", plan: 945 };
+          case "lakshya": return { name: "LIC Jeevan Lakshya", plan: 933 };
+          case "bima_bachat": return { name: "LIC New Bima Bachat", plan: 948 };
+          case "jeevan_amar": return { name: "LIC Jeevan Amar", plan: 855 };
+          case "jeevan_akshay": return { name: "LIC Jeevan Akshay-VII", plan: 857 };
+          case "bhagya_lakshmi": return { name: "LIC Bhagya Lakshmi", plan: 839 };
+          default: {
+            const p = LIC_PLANS.find(plan => plan.id === id);
+            return p ? { name: p.name, plan: p.planNumber } : { name: id, plan: "" };
+          }
+        }
+      };
+
+      const planDetails = getPlanDetails(planId);
+      const sceneId = 100 + index; // Dynamic ID
+      
+      let highlightText = "Secure government-backed endowment growth with profit sharing.";
+      if (planId === "umang") highlightText = "Whole life cover with guaranteed 8% annual survival payouts.";
+      else if (planId === "anand") highlightText = "Double benefit: Maturity payout + LIFETIME FREE whole-life cover.";
+      else if (planId === "lakshya") highlightText = "Child education buffer: Waiver of premium on parent decease.";
+      else if (planId === "jeevan_amar") highlightText = "Pure term protection shield with high value family cover.";
+      
+      let iconName = "FileCheck";
+      if (["labh", "anand", "umang", "lakshya", "bima_bachat", "jeevan_amar", "jeevan_akshay", "bhagya_lakshmi"].includes(planId)) {
+        if (planId === "labh") iconName = "Award";
+        else if (planId === "anand") iconName = "Heart";
+        else if (planId === "umang") iconName = "Coins";
+        else if (planId === "lakshya") iconName = "GraduationCap";
+        else if (planId === "bima_bachat") iconName = "Layers";
+        else if (planId === "jeevan_amar") iconName = "Shield";
+        else if (planId === "jeevan_akshay") iconName = "Building";
+        else if (planId === "bhagya_lakshmi") iconName = "Users";
+      } else {
+        const p = LIC_PLANS.find(plan => plan.id === planId);
+        if (p) {
+          if (p.category === "endowment") iconName = "GraduationCap";
+          else if (p.category === "whole_life") iconName = "Heart";
+          else if (p.category === "money_back") iconName = "Coins";
+          else if (p.category === "term") iconName = "Shield";
+        }
+      }
+
+      scenesList.push({
+        id: sceneId,
+        title: `Introducing ${planDetails.name}`,
+        duration: 15,
+        visualDescription: `A glowing golden scroll details the features of ${planDetails.name}. Government sovereign safety badge sparkles.`,
+        narratorText: `${planDetails.name} — Plan Number ${planDetails.plan}. Yeh ek behtareen scheme hai jo ${highlightText} 100% safe hai aur stock market risks se mukt hai.`,
+        textOnScreen: [
+          planDetails.name,
+          `Plan No. ${planDetails.plan}`,
+          "Sovereign Capital Guarantee",
+          "Tax Savings under Section 80C"
+        ],
+        icon: iconName,
+        category: "details",
+        associatedPlanId: planId // custom property to link back
+      } as any);
+    });
+
+    // 3. Comparisons & Strategy Scene
+    scenesList.push({
+      id: 5,
+      title: "Portfolio Budget Allocation",
+      duration: 15,
+      visualDescription: "A dynamic layout representing your monthly budget being distributed into secure safety baskets. Visual highlights show combined risk coverage index.",
+      narratorText: "Is portfolio combo mein aapka premium safe plans mein divide hota hai. Yeh secure allocation aapko intermediate milestones aur lifelong safety dono provide karta hai.",
+      textOnScreen: [
+        "Interactive Portfolio Allocation",
+        "Dual Benefit: Liquidity + Lifetime Cover",
+        "Risk Cover Index Boosted"
+      ],
+      icon: "Layers",
+      category: "features"
+    });
+
+    // 4. Combined Benefits Scene
+    scenesList.push({
+      id: 6,
+      title: "Combined Maturity & Protection",
+      duration: 20,
+      visualDescription: "A large golden umbrella shielding a family, raining gold coins into a digital treasure chest representing compound maturity payouts.",
+      narratorText: "Policy mature hone pe aapko sum assured ke saath saare accumulated bonuses milenge. Aur kisi bhi anhooni ki soorat mein, aapke parivar ko full tax-free death benefit milega.",
+      textOnScreen: [
+        "Maturity: Sum Assured + Accumulated Profits",
+        "Death Shield: Sovereign Tax-Free Payouts",
+        "Section 10(10D) Tax-Free Benefits"
+      ],
+      icon: "ShieldCheck",
+      category: "benefits"
+    });
+
+    // 5. Call to Action (Zindagi Ke Saath Bhi...)
+    scenesList.push({
+      id: 11,
+      title: "Secure Your Family's Future Today",
+      duration: 12,
+      visualDescription: "Pulsing LIC Logo with the national motto. Golden sparks represent guaranteed financial security.",
+      narratorText: "Zindagi ke saath bhi, zindagi ke baad bhi. Apne aur apne parivar ke sapno ko aaj hi secure kijiye. Trusted LIC consultant se aaj hi baat kijiye!",
+      textOnScreen: [
+        "LIC of India — Trust Since 1956",
+        "Secure Your Combo Plan Today",
+        "Contact Your LIC Representative"
+      ],
+      icon: "Heart",
+      category: "conclusion"
+    });
+
+    setScenes(scenesList);
+  }, [portfolioSelectedIds]);
 
   // Synchronizers
   const handleSceneChange = (sceneId: number) => {
@@ -152,11 +327,16 @@ export default function App() {
               <VideoPlayer 
                 onSceneChange={handleSceneChange} 
                 selectedSceneId={selectedSceneId} 
+                scenes={scenes}
+                portfolioSelectedIds={portfolioSelectedIds}
               />
             )}
             
             {activeTab === "calculator" && (
-              <Calculator />
+              <Calculator 
+                portfolioSelectedIds={portfolioSelectedIds}
+                setPortfolioSelectedIds={setPortfolioSelectedIds}
+              />
             )}
             
             {activeTab === "heatmap" && (
@@ -165,6 +345,7 @@ export default function App() {
 
             {activeTab === "studio" && (
               <StudioEditor 
+                scenes={scenes}
                 onUpdateScenes={handleUpdateScenes} 
                 onSelectScene={handleSelectSceneFromEditor} 
               />

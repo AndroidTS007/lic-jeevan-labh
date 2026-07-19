@@ -13,16 +13,34 @@ import {
   PortfolioSimResult
 } from "../utils";
 import SovereignCatalogExplorer from "./SovereignCatalogExplorer";
+import { LIC_PLANS } from "../plansData";
 
-export default function Calculator() {
+interface CalculatorProps {
+  portfolioSelectedIds: string[];
+  setPortfolioSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
+}
+
+export default function Calculator({ portfolioSelectedIds, setPortfolioSelectedIds }: CalculatorProps) {
   const [activeTab, setActiveTab] = useState<"individual" | "portfolio" | "explorer">("portfolio"); // default to the major value-add multi-plan
   const [age, setAge] = useState<number>(30);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(5000);
   const [policyTerm, setPolicyTerm] = useState<16 | 21 | 25>(25);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("labh"); // For single view
+  const [syncStatus, setSyncStatus] = useState<"idle" | "synced">("idle");
+
+  const handleSyncClick = () => {
+    setSyncStatus("synced");
+    try {
+      localStorage.setItem("portfolioSelectedIds", JSON.stringify(portfolioSelectedIds));
+    } catch (e) {
+      console.error(e);
+    }
+    setTimeout(() => {
+      setSyncStatus("idle");
+    }, 1500);
+  };
 
   // Portfolio Builder state
-  const [portfolioSelectedIds, setPortfolioSelectedIds] = useState<string[]>(["labh", "anand", "umang"]);
   const [portfolioStrategy, setPortfolioStrategy] = useState<"equal" | "returns" | "shield" | "custom">("equal");
   const [customAllocations, setCustomAllocations] = useState<{ [key: string]: number }>({
     labh: 40,
@@ -38,17 +56,31 @@ export default function Calculator() {
   // Budget presets
   const budgetPresets = [2500, 3500, 5000, 10000, 12000, 15000, 20000];
 
-  // Map of all 8 policy features for rendering
-  const allPolicyCategories = [
-    { id: "labh", name: "LIC Jeevan Labh", plan: 736, cat: "endowment" },
-    { id: "anand", name: "LIC New Jeevan Anand", plan: 915, cat: "endowment" },
-    { id: "umang", name: "LIC Jeevan Umang", plan: 945, cat: "whole_life" },
-    { id: "lakshya", name: "LIC Jeevan Lakshya", plan: 933, cat: "endowment" },
-    { id: "bima_bachat", name: "LIC New Bima Bachat", plan: 948, cat: "money_back" },
-    { id: "jeevan_amar", name: "LIC Jeevan Amar", plan: 855, cat: "term" },
-    { id: "jeevan_akshay", name: "LIC Jeevan Akshay-VII", plan: 857, cat: "pension" },
-    { id: "bhagya_lakshmi", name: "LIC Bhagya Lakshmi", plan: 839, cat: "micro" }
-  ];
+  // Map of all 8 policy features for rendering + 22 catalog plans dynamically appended!
+  const allPolicyCategories = useMemo(() => {
+    const flagship = [
+      { id: "labh", name: "LIC Jeevan Labh", plan: 736, cat: "endowment" },
+      { id: "anand", name: "LIC New Jeevan Anand", plan: 915, cat: "endowment" },
+      { id: "umang", name: "LIC Jeevan Umang", plan: 945, cat: "whole_life" },
+      { id: "lakshya", name: "LIC Jeevan Lakshya", plan: 933, cat: "endowment" },
+      { id: "bima_bachat", name: "LIC New Bima Bachat", plan: 948, cat: "money_back" },
+      { id: "jeevan_amar", name: "LIC Jeevan Amar", plan: 855, cat: "term" },
+      { id: "jeevan_akshay", name: "LIC Jeevan Akshay-VII", plan: 857, cat: "pension" },
+      { id: "bhagya_lakshmi", name: "LIC Bhagya Lakshmi", plan: 839, cat: "micro" }
+    ];
+    
+    const excludeIds = ["jeevan_labh", "new_jeevan_anand", "jeevan_umang", "jeevan_lakshya", "new_jeevan_amar"];
+    const dynamic = LIC_PLANS
+      .filter(p => !excludeIds.includes(p.id))
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        plan: p.planNumber,
+        cat: p.category
+      }));
+      
+    return [...flagship, ...dynamic];
+  }, []);
 
   // Calculate results for all 8 policies based on current parameters
   const allPlanResults = useMemo(() => {
@@ -152,7 +184,8 @@ export default function Calculator() {
       let combinedAssetVal = 0;
 
       portfolioSimulation.allocations.forEach(alloc => {
-        const fullPlan = allPlanResults.find(p => p.id === alloc.id)!;
+        const fullPlan = allPlanResults.find(p => p.id === alloc.id);
+        if (!fullPlan) return;
         const scale = fullPlan.sumAssured > 0 ? alloc.allocatedSumAssured / fullPlan.sumAssured : 0;
 
         // Premium for this year
@@ -222,9 +255,24 @@ export default function Calculator() {
         return <Building className="w-5 h-5 text-[#003087]" />;
       case "bhagya_lakshmi":
         return <Users className="w-5 h-5 text-pink-500" />;
-      default:
-        return <CalcIcon className="w-5 h-5 text-slate-500" />;
     }
+
+    // Dynamic catalog category fallbacks
+    const planInfo = allPolicyCategories.find(p => p.id === id);
+    if (planInfo) {
+      switch (planInfo.cat) {
+        case "endowment":
+          return <GraduationCap className="w-5 h-5 text-blue-500" />;
+        case "whole_life":
+          return <Heart className="w-5 h-5 text-red-500" />;
+        case "money_back":
+          return <Coins className="w-5 h-5 text-emerald-500" />;
+        case "term":
+          return <Shield className="w-5 h-5 text-indigo-500" />;
+      }
+    }
+
+    return <CalcIcon className="w-5 h-5 text-slate-500" />;
   };
 
   return (
@@ -447,6 +495,27 @@ export default function Calculator() {
                 })}
               </div>
 
+              <button 
+                onClick={handleSyncClick}
+                className={`w-full mt-3 py-2.5 rounded font-bold text-xs uppercase tracking-wider shadow transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  syncStatus === "synced"
+                    ? "bg-emerald-600 text-white shadow-md scale-[1.01]"
+                    : "bg-[#003087] hover:bg-[#002569] text-[#ffd700] hover:shadow-md active:scale-95 border border-[#ccae00]"
+                }`}
+              >
+                {syncStatus === "synced" ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-white animate-bounce" />
+                    <span>✓ Portfolio Synced &amp; Saved!</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-[#ffd700]" />
+                    <span>Sync Combo with Animated Player</span>
+                  </>
+                )}
+              </button>
+
               <p className="text-[10px] text-slate-500 italic mt-1.5">
                 💡 Choosing multiple policies hedges tax rules, combines pension yields, and sets separate child and lifetime checkpoints.
               </p>
@@ -520,7 +589,8 @@ export default function Calculator() {
                     </span>
                     {portfolioSelectedIds.map((id) => {
                       const value = customAllocations[id] || 30;
-                      const planInfo = allPolicyCategories.find(p => p.id === id)!;
+                      const planInfo = allPolicyCategories.find(p => p.id === id);
+                      if (!planInfo) return null;
                       return (
                         <div key={id} className="space-y-1 bg-white p-2.5 rounded border border-slate-150">
                           <div className="flex justify-between items-center text-xs font-bold">

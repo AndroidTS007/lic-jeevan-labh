@@ -1,4 +1,5 @@
 import { CalculationInputs, CalculationResults } from "./types";
+import { LIC_PLANS } from "./plansData";
 
 /**
  * Standard LIC Policy parameters and formulas
@@ -118,7 +119,54 @@ export function calculateAllPoliciesByBudget(
 ): DetailedPolicyResult[] {
   const yearlyBudget = monthlyBudget * 12;
 
-  const plansData = [
+  const excludeIds = ["jeevan_labh", "new_jeevan_anand", "jeevan_umang", "jeevan_lakshya", "new_jeevan_amar"];
+  const dynamicPlans = LIC_PLANS.filter(p => !excludeIds.includes(p.id)).map(plan => {
+    let bonusRate = 40; // default
+    let ppt: number = chosenTerm;
+    let premiumRateFactor = 45; // default
+    let suitabilityScore = 90;
+    
+    // Customize specific categories
+    if (plan.category === "term") {
+      bonusRate = 0;
+      premiumRateFactor = chosenTerm === 16 ? 12.5 : chosenTerm === 21 ? 14.2 : 15.6;
+      suitabilityScore = 91;
+    } else if (plan.category === "whole_life") {
+      bonusRate = 42;
+      ppt = plan.id === "jeevan_utsav_single" ? 1 : chosenTerm - 5;
+      premiumRateFactor = chosenTerm === 16 ? 72.8 : chosenTerm === 21 ? 51.4 : 39.5;
+      suitabilityScore = 92;
+    } else if (plan.category === "money_back") {
+      bonusRate = plan.id === "bima_shree" ? 42 : 40;
+      ppt = plan.id.includes("single") ? 1 : chosenTerm - 4;
+      premiumRateFactor = chosenTerm === 16 ? 60.5 : chosenTerm === 21 ? 42.4 : 32.5;
+      suitabilityScore = 88;
+    } else {
+      // endowment
+      bonusRate = plan.id.includes("jyoti") || plan.id.includes("baal") ? 50 : 42;
+      ppt = plan.id.includes("single") ? 1 : chosenTerm - 2;
+      premiumRateFactor = chosenTerm === 16 ? 75.0 : chosenTerm === 21 ? 49.0 : 40.0;
+      suitabilityScore = 90;
+    }
+
+    // Ensure ppt is at least 1 and does not exceed chosenTerm
+    ppt = Math.max(1, Math.min(ppt, chosenTerm));
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      planNumber: plan.planNumber,
+      policyCategory: plan.category as "endowment" | "whole_life" | "money_back" | "term",
+      mainHighlight: plan.bestFor || plan.features[0] || "",
+      bonusRate,
+      ppt: ppt as number,
+      premiumRateFactor,
+      suitabilityScore,
+      moneyBackPayouts: plan.category === "money_back" ? (plan.maturityBenefit || "") : undefined
+    };
+  });
+
+  const plansData: any[] = [
     {
       id: "labh",
       name: "LIC Jeevan Labh",
@@ -207,7 +255,8 @@ export function calculateAllPoliciesByBudget(
       ppt: chosenTerm - 2,
       premiumRateFactor: chosenTerm === 16 ? 32.0 : chosenTerm === 21 ? 28.0 : 25.0,
       suitabilityScore: 80
-    }
+    },
+    ...dynamicPlans
   ];
 
   return plansData.map((plan) => {
@@ -424,7 +473,8 @@ export function simulatePortfolio(
   let combinedAnnualAnnuity = 0;
   
   const finalAllocationsList = selectedPlanIds.map((planId) => {
-    const originalPlan = allPolicyResults.find(p => p.id === planId)!;
+    const originalPlan = allPolicyResults.find(p => p.id === planId);
+    if (!originalPlan) return null;
     const allocPercent = allocationsMap[planId] || 0;
     const allocatedMonthlyPremium = Math.round((totalMonthlyBudget * allocPercent) / 100);
     
@@ -453,14 +503,21 @@ export function simulatePortfolio(
       allocatedMaturity,
       percentage: Math.round(allocPercent)
     };
-  });
+  }).filter((item): item is NonNullable<typeof item> => item !== null);
 
   const overallROI = overallTotalPremiumPaid > 0 ? Number((combinedProjectedMaturity / overallTotalPremiumPaid).toFixed(2)) : 0;
   
   // Calculate relative risk cover index
-  let termMultiplier = selectedPlanIds.includes("jeevan_amar") ? 40 : 10;
-  let anandMultiplier = selectedPlanIds.includes("anand") ? 25 : 5;
-  let lakshyaMultiplier = selectedPlanIds.includes("lakshya") ? 25 : 5;
+  const hasTerm = selectedPlanIds.some(id => {
+    const p = allPolicyResults.find(pr => pr.id === id);
+    return p?.policyCategory === "term" || id === "jeevan_amar";
+  });
+  const hasAnand = selectedPlanIds.includes("anand") || selectedPlanIds.includes("new_jeevan_anand");
+  const hasLakshya = selectedPlanIds.includes("lakshya") || selectedPlanIds.includes("jeevan_lakshya");
+
+  let termMultiplier = hasTerm ? 40 : 10;
+  let anandMultiplier = hasAnand ? 25 : 5;
+  let lakshyaMultiplier = hasLakshya ? 25 : 5;
   let riskCoverIndex = Math.min(100, Math.round(termMultiplier + anandMultiplier + lakshyaMultiplier + (combinedSumAssured / 50000)));
 
   // Generate dynamic strategic feedback for this custom monthly level
