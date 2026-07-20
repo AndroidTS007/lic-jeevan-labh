@@ -13,14 +13,34 @@ import Calculator from "./components/Calculator";
 import SalesHeatmap from "./components/SalesHeatmap";
 import StudioEditor from "./components/StudioEditor";
 import AdvisorChat from "./components/AdvisorChat";
+import AuthModal from "./components/AuthModal";
+import LandingPage from "./components/LandingPage";
 import { Scene } from "./types";
 import { LIC_PLANS } from "./plansData";
 import { INITIAL_SCENES } from "./data";
+import { supabase } from "./supabaseClient";
+import { User } from "@supabase/supabase-js";
+import { LogIn, LogOut, UserCheck, User as UserIcon, Phone, Mail, ChevronDown, ShieldCheck } from "lucide-react";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"player" | "calculator" | "heatmap" | "studio" | "advisor">("player");
   const [selectedSceneId, setSelectedSceneId] = useState<number>(1);
   const [scenes, setScenes] = useState<Scene[]>(INITIAL_SCENES);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   
   // Initialize portfolioSelectedIds from localStorage
   const [portfolioSelectedIds, setPortfolioSelectedIds] = useState<string[]>(() => {
@@ -209,35 +229,40 @@ export default function App() {
     setActiveTab("player"); // Teleport view back to player stage
   };
 
+  // Authentication Gate: Unauthenticated users see LandingPage
+  if (!user) {
+    return <LandingPage onLoginSuccess={() => {}} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#f0f4f8] text-[#1a1a1a] flex flex-col font-sans selection:bg-[#ffd700] selection:text-[#003087]">
       
       {/* HEADER BAR */}
-      <header className="bg-[#003087] border-b border-[#ffd700] shadow-md sticky top-0 z-40 px-4 md:px-6">
-        <div className="max-w-7xl mx-auto py-3 flex flex-col lg:flex-row justify-between items-center gap-4">
+      <header className="bg-[#003087] border-b border-[#ffd700] shadow-md sticky top-0 z-40 px-3 md:px-6">
+        <div className="max-w-7xl mx-auto py-2.5 flex flex-row items-center justify-between gap-2 md:gap-4">
           
           {/* Logo Title */}
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-white rounded-sm flex items-center justify-center font-display font-black text-[#003087] border-2 border-[#ffd700] shadow-sm shrink-0">
-              <span className="text-sm">LIC</span>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="h-8 w-8 md:h-9 md:w-9 bg-white rounded-sm flex items-center justify-center font-display font-black text-[#003087] border-2 border-[#ffd700] shadow-sm shrink-0">
+              <span className="text-xs md:text-sm">LIC</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] bg-[#ffd700] text-[#003087] font-sans font-bold px-2 py-0.5 rounded shadow-sm">
-                  NOTELLM PROMPT ORCHESTRATOR
+            <div className="hidden sm:block">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] bg-[#ffd700] text-[#003087] font-sans font-bold px-1.5 py-0.5 rounded shadow-sm">
+                  NOTELLM ORCHESTRATOR
                 </span>
-                <span className="text-[10px] bg-emerald-600 text-white font-sans font-bold px-2 py-0.5 rounded uppercase shadow-sm">
+                <span className="text-[9px] bg-emerald-600 text-white font-sans font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">
                   PLAN 736
                 </span>
               </div>
-              <h1 className="text-base md:text-lg font-display font-bold text-white tracking-tight uppercase leading-tight mt-1">
-                NoteLLM <span className="text-[#ffd700]">Prompt Orchestrator</span>
+              <h1 className="text-sm md:text-base font-display font-bold text-white tracking-tight uppercase leading-tight mt-0.5">
+                NoteLLM <span className="text-[#ffd700]">Studio</span>
               </h1>
             </div>
           </div>
 
           {/* Core Navigation Tabs */}
-          <nav className="flex flex-wrap gap-1 p-1 bg-[#002466] rounded border border-[#003dbd]/50">
+          <nav className="flex items-center gap-1 p-1 bg-[#002466] rounded-xl border border-[#003dbd]/50 overflow-x-auto shrink-0 scrollbar-none">
             <button
               onClick={() => setActiveTab("player")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-sans font-bold uppercase tracking-wider transition-all ${
@@ -298,6 +323,92 @@ export default function App() {
               <span>Mithra AI Chat</span>
             </button>
           </nav>
+
+          {/* User Auth Profile Action Bar */}
+          <div className="relative">
+            {user ? (
+              <div>
+                <button
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center space-x-2 bg-[#002466] hover:bg-[#002d80] border border-[#ffd700]/40 rounded-full py-1 px-2.5 text-xs text-white shadow-md transition-all active:scale-95"
+                  title="View Account Profile"
+                >
+                  <div className="relative flex items-center justify-center w-7 h-7 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full font-bold text-slate-950 text-xs shadow-sm">
+                    {user.user_metadata?.full_name ? user.user_metadata.full_name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || "U"}
+                    <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-slate-900 rounded-full" />
+                  </div>
+                  <span className="font-semibold text-slate-200 text-xs hidden sm:inline">
+                    {user.user_metadata?.full_name ? user.user_metadata.full_name.split(" ")[0] : "Profile"}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-amber-300 transition-transform ${isProfileMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* Profile Popover Dropdown */}
+                {isProfileMenuOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsProfileMenuOpen(false)} 
+                    />
+                    <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 p-4 text-slate-100 text-xs animate-fade-in">
+                      <div className="flex items-center space-x-3 pb-3 border-b border-slate-800">
+                        <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center font-bold text-slate-950 text-base shadow-md">
+                          {user.user_metadata?.full_name ? user.user_metadata.full_name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div className="overflow-hidden">
+                          <h4 className="font-bold text-white text-sm truncate">
+                            {user.user_metadata?.full_name || "LIC Account User"}
+                          </h4>
+                          <span className="inline-flex items-center space-x-1 text-[10px] text-emerald-400 font-semibold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800/60 mt-0.5">
+                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                            <span>Active Account</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="py-3 space-y-2 text-slate-300">
+                        <div className="flex items-center space-x-2.5">
+                          <Mail className="w-4 h-4 text-amber-400 shrink-0" />
+                          <span className="truncate text-slate-200" title={user.email}>{user.email}</span>
+                        </div>
+                        {(user.user_metadata?.phone_number || user.phone) && (
+                          <div className="flex items-center space-x-2.5">
+                            <Phone className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span className="text-slate-200">{user.user_metadata?.phone_number || user.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2.5 pt-1 text-[11px] text-slate-400">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>Verified LIC Portal Member</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800">
+                        <button
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            supabase.auth.signOut();
+                          }}
+                          className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-red-950/50 hover:bg-red-900/80 border border-red-800/60 text-red-200 font-bold rounded-xl transition-all"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#ffd700] hover:bg-yellow-400 text-[#003087] text-xs font-extrabold uppercase rounded shadow transition-all active:scale-95"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In / Register</span>
+              </button>
+            )}
+          </div>
 
         </div>
       </header>
@@ -482,6 +593,12 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* SUPABASE AUTH MODAL */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
 
     </div>
   );
