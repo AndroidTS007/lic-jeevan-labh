@@ -72,9 +72,9 @@ Adhere to the following rules:
         }
       });
     } catch (modelErr: any) {
-      console.warn("Primary model error, retrying without tools:", modelErr.message);
+      console.warn("Primary model error/quota reached, retrying with gemini-1.5-flash fallback:", modelErr.message);
       response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-flash",
         contents: mappedContents,
       });
     }
