@@ -40,7 +40,7 @@ export default async function handler(req: Request | any, res: Response | any) {
       mappedContents.shift();
     }
 
-    const modelName = "gemini-2.0-flash";
+    const modelName = "gemini-3.5-flash";
 
     let response;
     try {
@@ -72,9 +72,9 @@ Adhere to the following rules:
         }
       });
     } catch (modelErr: any) {
-      console.warn("Primary model error/quota reached, retrying with gemini-1.5-flash fallback:", modelErr.message);
+      console.warn("Primary model error/quota reached, retrying with fallback model:", modelErr.message);
       response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3.6-flash",
         contents: mappedContents,
       });
     }
